@@ -1,7 +1,5 @@
 from flask import Flask, request, jsonify
 from flask_pymongo import PyMongo
-import json
-from bson import ObjectId
 from flask_jwt_extended import (
     JWTManager,
     jwt_required,
@@ -16,23 +14,40 @@ from datetime import datetime, timedelta
 import os
 from functools import wraps
 import re
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 
-# Configuration
-app.config["MONGO_URI"] = (
-    "mongodb+srv://saikatraj:rPFzD81v4rJnKUvu@freecluster.kl8lt.mongodb.net/assign2?retryWrites=true&w=majority&appName=FreeCluster"
+# Configuration from environment variables
+app.config["MONGO_URI"] = os.getenv(
+    "MONGO_URI"
 )
-app.config["JWT_SECRET_KEY"] = (
-    "your-secret-key-change-in-production"  # Change this in production
+app.config["JWT_SECRET_KEY"] = os.getenv(
+    "JWT_SECRET_KEY"
 )
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
-app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
+    hours=int(os.getenv("JWT_ACCESS_TOKEN_HOURS", "1"))
+)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(
+    days=int(os.getenv("JWT_REFRESH_TOKEN_DAYS", "30"))
+)
+
+# Flask environment configuration
+app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+app.config["ENV"] = os.getenv("FLASK_ENV")
 
 # Initialize extensions
 mongo = PyMongo(app)
 jwt = JWTManager(app)
 CORS(app)
+
+# Custom JSON encoder for ObjectId
+import json
+from bson import ObjectId
+
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -44,6 +59,7 @@ class JSONEncoder(json.JSONEncoder):
 app.json_encoder = JSONEncoder
 
 
+# Helper functions
 def validate_email(email):
     pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return re.match(pattern, email) is not None
@@ -704,6 +720,7 @@ def health_check():
                 "status": "success",
                 "message": "MediConnect API is running",
                 "timestamp": datetime.utcnow().isoformat(),
+                "environment": os.getenv("FLASK_ENV"),
             }
         ),
         200,
@@ -711,4 +728,9 @@ def health_check():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Get host and port from environment variables
+    host = os.getenv("FLASK_HOST", "0.0.0.0")
+    port = int(os.getenv("FLASK_PORT", "5000"))
+    debug = os.getenv("FLASK_DEBUG", "True").lower() == "true"
+    
+    app.run(debug=debug, host=host, port=port)
