@@ -23,10 +23,10 @@ app = Flask(__name__)
 
 # Configuration from environment variables
 app.config["MONGO_URI"] = os.getenv(
-    "MONGO_URI"
+    "MONGO_URI", "mongodb://localhost:27017/mediconnect"  # fallback for development
 )
 app.config["JWT_SECRET_KEY"] = os.getenv(
-    "JWT_SECRET_KEY"
+    "JWT_SECRET_KEY", "dev-secret-key-change-in-production"  # fallback for development
 )
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
     hours=int(os.getenv("JWT_ACCESS_TOKEN_HOURS", "1"))
@@ -37,7 +37,7 @@ app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(
 
 # Flask environment configuration
 app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
-app.config["ENV"] = os.getenv("FLASK_ENV")
+app.config["ENV"] = os.getenv("FLASK_ENV", "development")
 
 # Initialize extensions
 mongo = PyMongo(app)
@@ -720,7 +720,7 @@ def health_check():
                 "status": "success",
                 "message": "MediConnect API is running",
                 "timestamp": datetime.utcnow().isoformat(),
-                "environment": os.getenv("FLASK_ENV"),
+                "environment": os.getenv("FLASK_ENV", "development"),
             }
         ),
         200,
@@ -732,5 +732,5 @@ if __name__ == "__main__":
     host = os.getenv("FLASK_HOST", "0.0.0.0")
     port = int(os.getenv("FLASK_PORT", "5000"))
     debug = os.getenv("FLASK_DEBUG", "True").lower() == "true"
-    
+
     app.run(debug=debug, host=host, port=port)
